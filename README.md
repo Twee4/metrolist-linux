@@ -1,24 +1,18 @@
 # Metrolist Linux
 
-A native Linux desktop project for the Metrolist ecosystem, built as a separate codebase from the Android app at `https://github.com/Untet01/Metrolist`.
+A native Linux desktop port of the Metrolist ecosystem.
 
-This repo intentionally keeps the Android project as-is and moves the Linux implementation forward in a desktop-first architecture.
+This project is intentionally independent of the Android app at `https://github.com/Untet01/Metrolist` and focuses on building a desktop-first version using Kotlin Multiplatform and Compose for Desktop.
 
-## Architecture
+## Status
 
-- `shared/` holds the domain and data logic that can be reused across platforms
-- `app/` is the desktop UI using Compose for Desktop
-- the Android repo remains the source of truth for mobile-specific behavior
+The project now includes:
 
-## Current status
-
-This project now includes:
-
-- a shared Kotlin module for domain logic
+- a shared Kotlin state layer
 - a Compose desktop shell
-- navigation rail and starter screens
-- a minimal search and library scaffold
-- app structure ready for incremental feature porting
+- a search screen prototype
+- a library/settings foundation
+- a clear path for incremental feature porting from the Android app
 
 ## Run
 
@@ -26,29 +20,27 @@ This project now includes:
 ./gradlew :app:run
 ```
 
-If you do not have the Gradle wrapper installed locally yet, install Gradle and then run the same command.
-
-## Near-term roadmap
-
-1. Port search and metadata logic from the Android app into `shared`
-2. Add a real library screen and queue management
-3. Add a player panel for playback controls
-4. Introduce Linux-specific system integration (tray, notifications)
-5. Package the app for Linux distributions
-
-## Repo structure
+## Architecture
 
 ```text
 metrolist-linux/
 ├── app/
-│   └── src/desktopMain/kotlin/com/metrolist/linux/Main.kt
+│   └── src/desktopMain/kotlin/com/metrolist/linux/
 ├── shared/
 │   └── src/commonMain/kotlin/com/metrolist/shared/
 ├── build.gradle.kts
 ├── settings.gradle.kts
 ├── gradle.properties
 ├── gradle/libs.versions.toml
-├── LICENSE
+├── .gitignore
 ├── README.md
-└── .gitignore
+└── LICENSE
 ```
+
+## Roadmap
+
+1. Port the core YouTube/Music API and metadata logic from the Android app
+2. Add a real player panel and queue management
+3. Add library browsing and playlist features
+4. Add Linux-native system integration and packaging
+5. Prepare a production-ready desktop build for Linux distributions

@@ -9,14 +9,13 @@ kotlin {
     }
 
     sourceSets {
-        val commonMain by getting {
+        commonMain {
             dependencies {
                 implementation(project(":shared"))
             }
         }
 
-        val desktopMain by getting {
-            dependsOn(commonMain)
+        desktopMain {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(compose.material3)
@@ -24,6 +23,7 @@ kotlin {
                 implementation(compose.runtime)
                 implementation(compose.ui)
                 implementation(compose.components.resources)
+                implementation(compose.icons.extended)
                 implementation(libs.kotlinx.coroutines.core)
             }
         }
