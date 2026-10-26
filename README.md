@@ -2,7 +2,7 @@
 
 A native Linux desktop port of the Metrolist ecosystem.
 
-This project is intentionally independent of the Android at 'https://github.com/MetrolistGroup/Metrolist` and focuses on building a desktop-first version using Kotlin Multiplatform and Compose for Desktop.
+This project is intentionally independent of the Android at `https://github.com/MetrolistGroup/Metrolist` and focuses on building a desktop-first version using Kotlin Multiplatform and Compose for Desktop.
 
 ## Status
 
