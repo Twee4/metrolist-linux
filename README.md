@@ -1,24 +1,24 @@
 # Metrolist Linux
 
-A native Linux desktop version of Metrolist built with Kotlin Multiplatform and Compose for Desktop.
+A native Linux desktop project for the Metrolist ecosystem, built as a separate codebase from the Android app at `https://github.com/Untet01/Metrolist`.
 
-This repository is intentionally separated from the Android project at `https://github.com/Untet01/Metrolist`.
-The Android app remains the primary mobile implementation; this repo is the Linux-native port foundation.
+This repo intentionally keeps the Android project as-is and moves the Linux implementation forward in a desktop-first architecture.
 
-## Goals
+## Architecture
 
-- Reuse core music API and domain logic from the Android project
-- Build a Linux desktop app with Kotlin Multiplatform
-- Create a clean shared-layer architecture for future porting
-- Keep the Android project untouched while developing the desktop version
+- `shared/` holds the domain and data logic that can be reused across platforms
+- `app/` is the desktop UI using Compose for Desktop
+- the Android repo remains the source of truth for mobile-specific behavior
 
 ## Current status
 
-This is the starter project scaffold. It includes:
+This project now includes:
 
-- a shared KMP module for data and domain logic
-- a desktop app shell using Compose Desktop
-- a minimal app window to build on top of
+- a shared Kotlin module for domain logic
+- a Compose desktop shell
+- navigation rail and starter screens
+- a minimal search and library scaffold
+- app structure ready for incremental feature porting
 
 ## Run
 
@@ -26,7 +26,17 @@ This is the starter project scaffold. It includes:
 ./gradlew :app:run
 ```
 
-## Structure
+If you do not have the Gradle wrapper installed locally yet, install Gradle and then run the same command.
+
+## Near-term roadmap
+
+1. Port search and metadata logic from the Android app into `shared`
+2. Add a real library screen and queue management
+3. Add a player panel for playback controls
+4. Introduce Linux-specific system integration (tray, notifications)
+5. Package the app for Linux distributions
+
+## Repo structure
 
 ```text
 metrolist-linux/
@@ -38,12 +48,7 @@ metrolist-linux/
 ├── settings.gradle.kts
 ├── gradle.properties
 ├── gradle/libs.versions.toml
-└── README.md
+├── LICENSE
+├── README.md
+└── .gitignore
 ```
-
-## Recommended next steps
-
-1. Extract more logic from the Android repo into shared modules
-2. Add media playback and queue management
-3. Build the search/library views and navigation shell
-4. Add Linux-native system integration such as tray and notifications

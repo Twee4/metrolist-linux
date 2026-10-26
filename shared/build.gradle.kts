@@ -6,14 +6,10 @@ kotlin {
     jvm()
 
     sourceSets {
-        val commonMain by getting {
+        commonMain {
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
             }
-        }
-
-        val jvmMain by getting {
-            dependsOn(commonMain)
         }
     }
 }
