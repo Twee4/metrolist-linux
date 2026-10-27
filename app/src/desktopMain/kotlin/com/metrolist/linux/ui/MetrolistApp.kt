@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,10 +32,14 @@ import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,7 +49,8 @@ import androidx.compose.ui.unit.dp
 import com.metrolist.shared.model.Album
 import com.metrolist.shared.model.QueueEntry
 import com.metrolist.shared.model.Track
-import com.metrolist.shared.state.AppState
+import com.metrolist.shared.domain.MusicStore
+import kotlinx.coroutines.launch
 
 private enum class NavItem(val label: String) {
     HOME("Home"),
@@ -57,12 +61,15 @@ private enum class NavItem(val label: String) {
 
 @Composable
 fun MetrolistApp() {
-    val appState = remember { AppState() }
+    val store = remember { MusicStore() }
+    val scope = rememberCoroutineScope()
     var selected by remember { mutableStateOf(NavItem.HOME) }
     var query by remember { mutableStateOf("") }
-    val results = appState.results
-    val queue = appState.queue
-    val library = appState.library
+    val results by store.results.collectAsState()
+    val queue by store.queue.collectAsState()
+    val library by store.library.collectAsState()
+
+    LaunchedEffect(store) { store.load() }
 
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -86,26 +93,26 @@ fun MetrolistApp() {
                         }
                     }
 
-                    Divider(modifier = Modifier.fillMaxHeight().padding(vertical = 8.dp))
+                    VerticalDivider(modifier = Modifier.fillMaxHeight().padding(vertical = 8.dp))
 
                     Box(modifier = Modifier.fillMaxSize().padding(20.dp)) {
                         when (selected) {
-                            NavItem.HOME -> HomeScreen(library.value)
+                            NavItem.HOME -> HomeScreen(library)
                             NavItem.SEARCH -> SearchScreen(
                                 query = query,
                                 onQueryChange = {
                                     query = it
-                                    appState.updateQuery(it)
+                                    scope.launch { store.updateQuery(it) }
                                 },
-                                tracks = results.value,
+                                tracks = results,
                             )
-                            NavItem.LIBRARY -> LibraryScreen(library.value)
+                            NavItem.LIBRARY -> LibraryScreen(library)
                             NavItem.SETTINGS -> SettingsScreen()
                         }
                     }
                 }
 
-                PlayerBar(queue.value)
+                PlayerBar(queue)
             }
         }
     }

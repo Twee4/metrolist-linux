@@ -1,6 +1,9 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.compose)
+    alias(libs.plugins.kotlinCompose)
 }
 
 kotlin {
@@ -23,7 +26,7 @@ kotlin {
                 implementation(compose.runtime)
                 implementation(compose.ui)
                 implementation(compose.components.resources)
-                implementation(compose.icons.extended)
+                implementation(compose.materialIconsExtended)
                 implementation(libs.kotlinx.coroutines.core)
             }
         }
@@ -34,7 +37,12 @@ compose {
     desktop {
         application {
             mainClass = "com.metrolist.linux.MainKt"
-            jvmArgs += listOf("-Dsun.java2d.metal=false")
+
+            nativeDistributions {
+                targetFormats(TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.AppImage)
+                packageName = "metrolist-linux"
+                packageVersion = "1.0.0"
+            }
         }
     }
 }

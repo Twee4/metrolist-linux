@@ -16,9 +16,19 @@ The project now includes:
 
 ## Run
 
+Requires JDK 17+. If `gradlew` is missing, generate it once with a local Gradle install:
+
+```bash
+gradle wrapper --gradle-version 8.14.3
+```
+
+Then:
+
 ```bash
 ./gradlew :app:run
 ```
+
+Linux packages (`.deb`, `.rpm`, AppImage) are built with `./gradlew :app:packageDistributionForCurrentOS`.
 
 ## Architecture
 
