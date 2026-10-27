@@ -1,38 +1,42 @@
 package com.metrolist.shared.repository
 
 import com.metrolist.shared.model.Album
+import com.metrolist.shared.model.QueueEntry
 import com.metrolist.shared.model.Track
 
 interface MusicRepository {
     suspend fun search(query: String): List<Track>
     suspend fun getLibrary(): List<Album>
+    suspend fun getQueue(): List<QueueEntry>
 }
 
+/** Demo data source used until the real YouTube Music backend is ported. */
 class InMemoryMusicRepository : MusicRepository {
+    private val tracks = listOf(
+        Track("1", "Desktop Example Track", "Metrolist", "Demo Album", 214),
+        Track("2", "Another Demo Track", "Metrolist", "Demo Album", 186),
+        Track("3", "Night Drive", "Metrolist", "Night Drive", 201),
+    )
+
     override suspend fun search(query: String): List<Track> {
         val normalized = query.trim()
         if (normalized.isEmpty()) return emptyList()
 
-        return listOf(
-            Track(
-                id = "1",
-                title = "Sample track",
-                artist = "Demo Artist",
-                durationSeconds = 214,
-                artUrl = null,
-            ),
-            Track(
-                id = "2",
-                title = "Another track",
-                artist = "Demo Artist",
-                durationSeconds = 188,
-                artUrl = null,
-            )
-        ).filter { it.title.contains(normalized, ignoreCase = true) || it.artist.contains(normalized, ignoreCase = true) }
+        return tracks.filter {
+            it.title.contains(normalized, ignoreCase = true) ||
+                it.artist.contains(normalized, ignoreCase = true)
+        }
     }
 
     override suspend fun getLibrary(): List<Album> = listOf(
-        Album(id = "a1", title = "Library Picks", artist = "Various Artists"),
-        Album(id = "a2", title = "Night Drive", artist = "Demo Artist")
+        Album("a1", "Library Picks", "Various Artists"),
+        Album("a2", "Night Drive", "Metrolist Demo"),
+        Album("a3", "Deep Focus", "Metrolist Demo"),
+    )
+
+    override suspend fun getQueue(): List<QueueEntry> = listOf(
+        QueueEntry("q1", "Midnight Echo", "Demo Artist", 214),
+        QueueEntry("q2", "Neon Skyline", "Demo Artist", 193),
+        QueueEntry("q3", "Amber Skies", "Demo Artist", 232),
     )
 }

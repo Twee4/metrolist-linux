@@ -1,6 +1,7 @@
 package com.metrolist.shared.domain
 
 import com.metrolist.shared.model.Album
+import com.metrolist.shared.model.QueueEntry
 import com.metrolist.shared.model.Track
 import com.metrolist.shared.repository.InMemoryMusicRepository
 import com.metrolist.shared.repository.MusicRepository
@@ -8,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+/** Single source of truth for UI state. Swap the repository to change the data source. */
 class MusicStore(
     private val repository: MusicRepository = InMemoryMusicRepository(),
 ) {
@@ -20,16 +22,16 @@ class MusicStore(
     private val _library = MutableStateFlow<List<Album>>(emptyList())
     val library: StateFlow<List<Album>> = _library.asStateFlow()
 
+    private val _queue = MutableStateFlow<List<QueueEntry>>(emptyList())
+    val queue: StateFlow<List<QueueEntry>> = _queue.asStateFlow()
+
     suspend fun updateQuery(nextQuery: String) {
         _query.value = nextQuery
-        if (nextQuery.isBlank()) {
-            _results.value = emptyList()
-            return
-        }
-        _results.value = repository.search(nextQuery)
+        _results.value = if (nextQuery.isBlank()) emptyList() else repository.search(nextQuery)
     }
 
-    suspend fun loadLibrary() {
+    suspend fun load() {
         _library.value = repository.getLibrary()
+        _queue.value = repository.getQueue()
     }
 }
