@@ -19,11 +19,3 @@ data class Album(
     val artist: String,
     val year: Int? = null,
 )
-
-@Serializable
-data class QueueEntry(
-    val id: String,
-    val title: String,
-    val artist: String,
-    val durationSeconds: Long,
-)

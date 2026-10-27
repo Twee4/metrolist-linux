@@ -1,6 +1,7 @@
 package com.metrolist.linux.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -30,10 +31,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -44,11 +47,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.metrolist.shared.model.Album
-import com.metrolist.shared.model.QueueEntry
-import com.metrolist.shared.model.Track
 import com.metrolist.shared.domain.MusicStore
+import com.metrolist.shared.model.Album
+import com.metrolist.shared.model.Track
+import com.metrolist.shared.player.MpvAudioBackend
+import com.metrolist.shared.player.PlayerController
+import com.metrolist.shared.player.PlayerState
 import com.metrolist.shared.repository.YouTubeMusicRepository
 import kotlinx.coroutines.delay
 
@@ -67,10 +73,14 @@ fun MetrolistApp() {
     val results by store.results.collectAsState()
     val isSearching by store.isSearching.collectAsState()
     val error by store.error.collectAsState()
-    val queue by store.queue.collectAsState()
     val library by store.library.collectAsState()
 
+    val player = remember { PlayerController(MpvAudioBackend()) }
+    val playerState by player.state.collectAsState()
+
     LaunchedEffect(store) { store.load() }
+    LaunchedEffect(player) { player.start(this) }
+    DisposableEffect(player) { onDispose { player.close() } }
 
     // Debounce: a new keystroke cancels the pending search and restarts the timer.
     LaunchedEffect(query) {
@@ -111,6 +121,8 @@ fun MetrolistApp() {
                                 tracks = results,
                                 isSearching = isSearching,
                                 error = error,
+                                currentTrackId = playerState.current?.id,
+                                onPlay = { track -> player.play(track, results) },
                             )
                             NavItem.LIBRARY -> LibraryScreen(library)
                             NavItem.SETTINGS -> SettingsScreen()
@@ -118,7 +130,13 @@ fun MetrolistApp() {
                     }
                 }
 
-                PlayerBar(queue)
+                PlayerBar(
+                    state = playerState,
+                    onPrevious = player::previous,
+                    onTogglePlay = player::togglePlayPause,
+                    onNext = player::next,
+                    onSeek = player::seekTo,
+                )
             }
         }
     }
@@ -174,6 +192,8 @@ private fun SearchScreen(
     tracks: List<Track>,
     isSearching: Boolean,
     error: String?,
+    currentTrackId: String?,
+    onPlay: (Track) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         OutlinedTextField(
@@ -196,20 +216,28 @@ private fun SearchScreen(
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(tracks) { track ->
+                    val isCurrent = track.id == currentTrackId
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            modifier = Modifier.fillMaxWidth().clickable { onPlay(track) }.padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Column {
-                                Text(track.title, fontWeight = FontWeight.SemiBold)
-                                Text(track.artist)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    track.title,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            Text("${track.durationSeconds / 60}:${String.format("%02d", track.durationSeconds % 60)}")
+                            Text(formatTime(track.durationSeconds.toDouble()))
                         }
                     }
                 }
@@ -260,8 +288,21 @@ private fun SettingsScreen() {
 }
 
 @Composable
-private fun PlayerBar(queue: List<QueueEntry>) {
-    val playing = queue.firstOrNull() ?: QueueEntry("none", "Nothing playing", "Nothing loaded", 0)
+private fun PlayerBar(
+    state: PlayerState,
+    onPrevious: () -> Unit,
+    onTogglePlay: () -> Unit,
+    onNext: () -> Unit,
+    onSeek: (Double) -> Unit,
+) {
+    val track = state.current
+    val error = state.error
+    val duration = state.durationSeconds
+    val canSeek = track != null && duration > 0
+    var dragFraction by remember { mutableStateOf<Float?>(null) }
+    val fraction = dragFraction
+        ?: if (duration > 0) (state.positionSeconds / duration).toFloat().coerceIn(0f, 1f) else 0f
+    val shownPosition = if (dragFraction != null) fraction * duration else state.positionSeconds
 
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -271,26 +312,75 @@ private fun PlayerBar(queue: List<QueueEntry>) {
         Row(
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(
-                    modifier = Modifier.size(52.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = MaterialTheme.colorScheme.primary)
-                }
-                Column {
-                    Text(playing.title, fontWeight = FontWeight.SemiBold)
-                    Text(playing.artist, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    track?.title ?: "Nothing playing",
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (error != null) {
+                    Text(
+                        error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                } else {
+                    Text(
+                        track?.artist ?: "Search for a track and click it to play",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(onClick = {}) { Icon(Icons.Default.SkipPrevious, contentDescription = "Previous") }
-                IconButton(onClick = {}) { Icon(Icons.Default.PlayArrow, contentDescription = "Play") }
-                IconButton(onClick = {}) { Icon(Icons.Default.SkipNext, contentDescription = "Next") }
+                IconButton(onClick = onPrevious, enabled = track != null) {
+                    Icon(Icons.Default.SkipPrevious, contentDescription = "Previous")
+                }
+                IconButton(onClick = onTogglePlay, enabled = track != null) {
+                    Icon(
+                        if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (state.isPlaying) "Pause" else "Play",
+                    )
+                }
+                IconButton(onClick = onNext, enabled = state.hasNext) {
+                    Icon(Icons.Default.SkipNext, contentDescription = "Next")
+                }
+            }
+
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(formatTime(shownPosition), style = MaterialTheme.typography.bodySmall)
+                Slider(
+                    value = fraction,
+                    onValueChange = { dragFraction = it },
+                    onValueChangeFinished = {
+                        dragFraction?.let { onSeek(it * duration) }
+                        dragFraction = null
+                    },
+                    enabled = canSeek,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(formatTime(duration), style = MaterialTheme.typography.bodySmall)
             }
         }
     }
+}
+
+private fun formatTime(totalSeconds: Double): String {
+    val seconds = totalSeconds.toLong().coerceAtLeast(0)
+    val hours = seconds / 3600
+    val minutes = (seconds % 3600) / 60
+    val secs = seconds % 60
+    return if (hours > 0) String.format("%d:%02d:%02d", hours, minutes, secs)
+    else String.format("%d:%02d", minutes, secs)
 }
