@@ -11,6 +11,19 @@ kotlin {
             dependencies {
                 api(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
+                api(libs.ktor.client.core)
+            }
+        }
+
+        commonTest {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
+
+        jvmMain {
+            dependencies {
+                implementation(libs.ktor.client.cio)
             }
         }
     }

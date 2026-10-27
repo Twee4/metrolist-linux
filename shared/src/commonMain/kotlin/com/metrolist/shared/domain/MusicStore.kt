@@ -5,6 +5,7 @@ import com.metrolist.shared.model.QueueEntry
 import com.metrolist.shared.model.Track
 import com.metrolist.shared.repository.InMemoryMusicRepository
 import com.metrolist.shared.repository.MusicRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,15 +20,39 @@ class MusicStore(
     private val _results = MutableStateFlow<List<Track>>(emptyList())
     val results: StateFlow<List<Track>> = _results.asStateFlow()
 
+    private val _isSearching = MutableStateFlow(false)
+    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
     private val _library = MutableStateFlow<List<Album>>(emptyList())
     val library: StateFlow<List<Album>> = _library.asStateFlow()
 
     private val _queue = MutableStateFlow<List<QueueEntry>>(emptyList())
     val queue: StateFlow<List<QueueEntry>> = _queue.asStateFlow()
 
+    /** Runs a search. Cancelling the calling coroutine (e.g. on the next keystroke) aborts it. */
     suspend fun updateQuery(nextQuery: String) {
         _query.value = nextQuery
-        _results.value = if (nextQuery.isBlank()) emptyList() else repository.search(nextQuery)
+        _error.value = null
+        if (nextQuery.isBlank()) {
+            _results.value = emptyList()
+            _isSearching.value = false
+            return
+        }
+
+        _isSearching.value = true
+        try {
+            _results.value = repository.search(nextQuery)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            _results.value = emptyList()
+            _error.value = e.message ?: "Search failed"
+        } finally {
+            _isSearching.value = false
+        }
     }
 
     suspend fun load() {

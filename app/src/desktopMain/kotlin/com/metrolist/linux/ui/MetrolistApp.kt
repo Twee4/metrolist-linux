@@ -39,7 +39,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +49,8 @@ import com.metrolist.shared.model.Album
 import com.metrolist.shared.model.QueueEntry
 import com.metrolist.shared.model.Track
 import com.metrolist.shared.domain.MusicStore
-import kotlinx.coroutines.launch
+import com.metrolist.shared.repository.YouTubeMusicRepository
+import kotlinx.coroutines.delay
 
 private enum class NavItem(val label: String) {
     HOME("Home"),
@@ -61,15 +61,22 @@ private enum class NavItem(val label: String) {
 
 @Composable
 fun MetrolistApp() {
-    val store = remember { MusicStore() }
-    val scope = rememberCoroutineScope()
+    val store = remember { MusicStore(YouTubeMusicRepository()) }
     var selected by remember { mutableStateOf(NavItem.HOME) }
     var query by remember { mutableStateOf("") }
     val results by store.results.collectAsState()
+    val isSearching by store.isSearching.collectAsState()
+    val error by store.error.collectAsState()
     val queue by store.queue.collectAsState()
     val library by store.library.collectAsState()
 
     LaunchedEffect(store) { store.load() }
+
+    // Debounce: a new keystroke cancels the pending search and restarts the timer.
+    LaunchedEffect(query) {
+        delay(300)
+        store.updateQuery(query)
+    }
 
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -100,11 +107,10 @@ fun MetrolistApp() {
                             NavItem.HOME -> HomeScreen(library)
                             NavItem.SEARCH -> SearchScreen(
                                 query = query,
-                                onQueryChange = {
-                                    query = it
-                                    scope.launch { store.updateQuery(it) }
-                                },
+                                onQueryChange = { query = it },
                                 tracks = results,
+                                isSearching = isSearching,
+                                error = error,
                             )
                             NavItem.LIBRARY -> LibraryScreen(library)
                             NavItem.SETTINGS -> SettingsScreen()
@@ -166,6 +172,8 @@ private fun SearchScreen(
     query: String,
     onQueryChange: (String) -> Unit,
     tracks: List<Track>,
+    isSearching: Boolean,
+    error: String?,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         OutlinedTextField(
@@ -176,8 +184,15 @@ private fun SearchScreen(
             singleLine = true,
         )
 
-        if (tracks.isEmpty()) {
-            Text("Type to search. This is the native Linux desktop prototype.")
+        if (error != null) {
+            Text(error, color = MaterialTheme.colorScheme.error)
+        } else if (isSearching && tracks.isEmpty()) {
+            Text("Searching…")
+        } else if (tracks.isEmpty()) {
+            Text(
+                if (query.isBlank()) "Type to search YouTube Music."
+                else "No results."
+            )
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(tracks) { track ->

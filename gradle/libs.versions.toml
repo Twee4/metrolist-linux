@@ -3,8 +3,11 @@ kotlin = "2.0.21"
 compose = "1.7.3"
 coroutines = "1.8.1"
 serialization = "1.7.3"
+ktor = "3.0.1"
 
 [libraries]
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "compose" }
