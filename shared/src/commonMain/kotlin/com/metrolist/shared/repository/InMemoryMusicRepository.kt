@@ -1,13 +1,11 @@
 package com.metrolist.shared.repository
 
 import com.metrolist.shared.model.Album
-import com.metrolist.shared.model.QueueEntry
 import com.metrolist.shared.model.Track
 
 interface MusicRepository {
     suspend fun search(query: String): List<Track>
     suspend fun getLibrary(): List<Album>
-    suspend fun getQueue(): List<QueueEntry>
 }
 
 /** Demo data source used until the real YouTube Music backend is ported. */
@@ -32,11 +30,5 @@ class InMemoryMusicRepository : MusicRepository {
         Album("a1", "Library Picks", "Various Artists"),
         Album("a2", "Night Drive", "Metrolist Demo"),
         Album("a3", "Deep Focus", "Metrolist Demo"),
-    )
-
-    override suspend fun getQueue(): List<QueueEntry> = listOf(
-        QueueEntry("q1", "Midnight Echo", "Demo Artist", 214),
-        QueueEntry("q2", "Neon Skyline", "Demo Artist", 193),
-        QueueEntry("q3", "Amber Skies", "Demo Artist", 232),
     )
 }

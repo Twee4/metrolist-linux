@@ -28,6 +28,19 @@ Then:
 ./gradlew :app:run
 ```
 
+### Audio playback
+
+Playback uses [`mpv`](https://mpv.io) with [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) to stream audio, so both
+must be installed and on your `PATH`:
+
+```bash
+sudo apt install mpv yt-dlp      # Debian/Ubuntu (distro yt-dlp can lag; `pipx install yt-dlp` stays current)
+sudo dnf install mpv yt-dlp      # Fedora
+sudo pacman -S mpv yt-dlp        # Arch
+```
+
+YouTube changes often. If tracks stop playing, update `yt-dlp` first.
+
 Linux packages (`.deb`, `.rpm`, AppImage) are built with `./gradlew :app:packageDistributionForCurrentOS`.
 
 ## Architecture
