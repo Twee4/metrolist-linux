@@ -12,7 +12,7 @@ import org.freedesktop.dbus.connections.impl.DBusConnection
 import org.freedesktop.dbus.connections.impl.DBusConnectionBuilder
 import org.freedesktop.dbus.interfaces.DBusInterface
 import org.freedesktop.dbus.interfaces.Properties
-import org.freedesktop.dbus.types.DBusPath
+import org.freedesktop.dbus.DBusPath
 import org.freedesktop.dbus.types.Variant
 import kotlin.math.roundToInt
 
