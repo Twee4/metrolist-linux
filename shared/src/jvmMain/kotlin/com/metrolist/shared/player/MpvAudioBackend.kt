@@ -162,11 +162,6 @@ class MpvAudioBackend(
         throw IOException("Timed out waiting for mpv to start.")
     }
 
-    private fun deleteSocket(socketPath: Path) {
-        runCatching { Files.deleteIfExists(socketPath) }
-        runCatching { Files.deleteIfExists(socketPath.parent) }
-    }
-
     private fun send(conn: Connection, command: String) {
         val buffer = ByteBuffer.wrap((command + "\n").toByteArray(Charsets.UTF_8))
         while (buffer.hasRemaining()) conn.channel.write(buffer)
@@ -205,6 +200,12 @@ class MpvAudioBackend(
     }
 
     private companion object {
+        /** Removes the socket file and its private directory. Safe to call more than once. */
+        fun deleteSocket(socketPath: Path) {
+            runCatching { Files.deleteIfExists(socketPath) }
+            runCatching { Files.deleteIfExists(socketPath.parent) }
+        }
+
         const val SOCKET_NAME = "mpv.sock"
         const val SOCKET_WAIT_ATTEMPTS = 100
         const val SOCKET_WAIT_STEP_MS = 50L
