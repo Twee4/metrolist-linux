@@ -10,6 +10,7 @@ class MpvProtocolTest {
     fun buildsCommands() {
         assertEquals("""{"command":["loadfile","https://x/y"]}""", MpvProtocol.loadFile("https://x/y"))
         assertEquals("""{"command":["set_property","pause",true]}""", MpvProtocol.setPause(true))
+        assertEquals("""{"command":["set_property","volume",40]}""", MpvProtocol.setVolume(40))
         assertEquals("""{"command":["seek",12.5,"absolute"]}""", MpvProtocol.seekAbsolute(12.5))
         assertEquals("""{"command":["stop"]}""", MpvProtocol.stop())
         assertEquals("""{"command":["observe_property",1,"time-pos"]}""", MpvProtocol.observeProperty(1, "time-pos"))
