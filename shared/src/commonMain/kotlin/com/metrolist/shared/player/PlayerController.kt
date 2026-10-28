@@ -80,6 +80,17 @@ class PlayerController(
         _state.update { it.copy(isPlaying = nowPlaying) }
     }
 
+    /** Pauses if playing; does nothing otherwise. */
+    fun pause() {
+        if (_state.value.isPlaying) togglePlayPause()
+    }
+
+    /** Resumes if paused; does nothing otherwise. */
+    fun resume() {
+        val s = _state.value
+        if (s.current != null && !s.isPlaying) togglePlayPause()
+    }
+
     fun next() {
         val s = _state.value
         if (s.current == null) return
@@ -131,6 +142,14 @@ class PlayerController(
                 _state.update { it.copy(shuffle = false, queue = original, index = restoredIndex) }
             }
         }
+    }
+
+    fun setShuffle(enabled: Boolean) {
+        if (_state.value.shuffle != enabled) toggleShuffle()
+    }
+
+    fun setRepeat(mode: RepeatMode) {
+        _state.update { it.copy(repeat = mode) }
     }
 
     /** Cycles off -> repeat all -> repeat one -> off. */

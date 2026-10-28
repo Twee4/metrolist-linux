@@ -41,6 +41,20 @@ sudo pacman -S mpv yt-dlp        # Arch
 
 YouTube changes often. If tracks stop playing, update `yt-dlp` first.
 
+### Media keys and "now playing" (MPRIS)
+
+While the app runs it registers on the D-Bus session bus as an [MPRIS](https://specifications.freedesktop.org/mpris-spec/latest/)
+player, so media keys, GNOME/KDE "now playing" widgets and `playerctl` can control it. To check it works:
+
+```bash
+playerctl -l                      # should list "metrolist"
+playerctl -p metrolist metadata   # title, artist, album, length of the current track
+playerctl -p metrolist play-pause
+playerctl -p metrolist next
+```
+
+If there is no D-Bus session (for example over plain SSH) the app prints one line to stderr and runs without it.
+
 Linux packages (`.deb`, `.rpm`, AppImage) are built with `./gradlew :app:packageDistributionForCurrentOS`.
 
 ## Architecture

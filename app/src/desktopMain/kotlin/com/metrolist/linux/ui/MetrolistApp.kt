@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import com.metrolist.shared.domain.MusicStore
 import com.metrolist.shared.model.Album
 import com.metrolist.shared.model.Track
+import com.metrolist.shared.player.MprisService
 import com.metrolist.shared.player.MpvAudioBackend
 import com.metrolist.shared.player.PlayerController
 import com.metrolist.shared.player.PlayerState
@@ -93,6 +94,10 @@ fun MetrolistApp() {
     LaunchedEffect(store) { store.load() }
     LaunchedEffect(player) { player.start(this) }
     DisposableEffect(player) { onDispose { player.close() } }
+
+    // Media keys and the desktop "now playing" widget (MPRIS). Does nothing if there is no D-Bus session.
+    val mpris = remember { MprisService(player) }
+    LaunchedEffect(mpris) { mpris.serve() }
 
     // Debounce: a new keystroke cancels the pending search and restarts the timer.
     LaunchedEffect(query) {
