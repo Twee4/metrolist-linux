@@ -349,4 +349,55 @@ class PlayerControllerTest {
         )
         assertEquals(listOf("volume:40", "play:a", "stop"), backend.calls)
     }
+
+    @Test
+    fun pauseAndResumeAreIdempotent() {
+        val (player, backend) = controller()
+        player.play(a)
+
+        player.resume() // already playing: nothing to do
+        player.pause()
+        player.pause() // already paused: nothing to do
+        assertFalse(player.state.value.isPlaying)
+        player.resume()
+        player.resume()
+        assertTrue(player.state.value.isPlaying)
+        assertEquals(listOf("play:a", "paused:true", "paused:false"), backend.calls)
+    }
+
+    @Test
+    fun pauseAndResumeDoNothingWithoutATrack() {
+        val (player, backend) = controller()
+        player.pause()
+        player.resume()
+        assertTrue(backend.calls.isEmpty())
+    }
+
+    @Test
+    fun setRepeatSetsTheModeDirectly() {
+        val (player, _) = controller()
+        player.setRepeat(RepeatMode.ONE)
+        assertEquals(RepeatMode.ONE, player.state.value.repeat)
+        player.setRepeat(RepeatMode.OFF)
+        assertEquals(RepeatMode.OFF, player.state.value.repeat)
+    }
+
+    @Test
+    fun setShuffleOnlyActsWhenTheValueChanges() {
+        val (player, backend) = controller()
+        player.play(a, listOf(a, b, c))
+
+        player.setShuffle(false) // already off
+        assertFalse(player.state.value.shuffle)
+        assertEquals(listOf(a, b, c), player.state.value.queue)
+
+        player.setShuffle(true)
+        assertTrue(player.state.value.shuffle)
+        player.setShuffle(true) // already on: must not reshuffle away from the current track
+        assertEquals(a, player.state.value.current)
+
+        player.setShuffle(false)
+        assertEquals(listOf(a, b, c), player.state.value.queue)
+        assertEquals(listOf("play:a"), backend.calls)
+    }
 }

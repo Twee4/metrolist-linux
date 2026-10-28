@@ -25,6 +25,10 @@ kotlin {
         jvmMain {
             dependencies {
                 implementation(libs.ktor.client.cio)
+                implementation(libs.dbus.java.core)
+                implementation(libs.dbus.java.transport)
+                // dbus-java logs through SLF4J; without a binding it prints a warning at startup.
+                runtimeOnly(libs.slf4j.nop)
             }
         }
     }
