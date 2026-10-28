@@ -27,6 +27,9 @@ object MpvProtocol {
     fun setPause(paused: Boolean) =
         command(JsonPrimitive("set_property"), JsonPrimitive("pause"), JsonPrimitive(paused))
 
+    fun setVolume(percent: Int) =
+        command(JsonPrimitive("set_property"), JsonPrimitive("volume"), JsonPrimitive(percent))
+
     fun seekAbsolute(seconds: Double) =
         command(JsonPrimitive("seek"), JsonPrimitive(seconds), JsonPrimitive("absolute"))
 

@@ -13,6 +13,9 @@ interface AudioBackend {
 
     fun seekTo(seconds: Double)
 
+    /** Sets the output volume, 0 (silent) to 100 (full). Applies to the current and later tracks. */
+    fun setVolume(percent: Int)
+
     /** Stops playback but keeps the backend usable. */
     fun stop()
 

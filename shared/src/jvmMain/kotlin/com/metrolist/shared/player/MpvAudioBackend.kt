@@ -53,6 +53,9 @@ class MpvAudioBackend(
     @Volatile private var closed = false
     @Volatile private var lastPosition = Double.NEGATIVE_INFINITY
 
+    /** Remembered so a freshly (re)started mpv gets the volume the user chose. */
+    @Volatile private var volume = 100
+
     init {
         // Don't leave an idle mpv behind if the app exits without calling close().
         Runtime.getRuntime().addShutdownHook(Thread { connection?.dispose() })
@@ -85,6 +88,11 @@ class MpvAudioBackend(
         commands.trySend(MpvProtocol.seekAbsolute(seconds))
     }
 
+    override fun setVolume(percent: Int) {
+        volume = percent.coerceIn(0, 100)
+        commands.trySend(MpvProtocol.setVolume(volume))
+    }
+
     override fun stop() {
         commands.trySend(MpvProtocol.stop())
     }
@@ -106,6 +114,7 @@ class MpvAudioBackend(
         connection = conn
         send(conn, MpvProtocol.observeProperty(MpvProtocol.PROP_POSITION_ID, "time-pos"))
         send(conn, MpvProtocol.observeProperty(MpvProtocol.PROP_DURATION_ID, "duration"))
+        send(conn, MpvProtocol.setVolume(volume))
         scope.launch { readEvents(conn) }
         return conn
     }
