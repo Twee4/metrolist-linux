@@ -55,6 +55,15 @@ playerctl -p metrolist next
 
 If there is no D-Bus session (for example over plain SSH) the app prints one line to stderr and runs without it.
 
+### System tray
+
+Closing the window hides it to the tray and the music keeps playing. Click the tray icon to bring the window back,
+or right-click it for play/pause, next, previous, show/hide and quit.
+
+Not every desktop has a tray: KDE, XFCE and most others do, while GNOME needs the
+[AppIndicator extension](https://extensions.gnome.org/extension/615/appindicator-support/). Without a tray,
+closing the window quits the app so it can never be left running with no way to reach it.
+
 Linux packages (`.deb`, `.rpm`, AppImage) are built with `./gradlew :app:packageDistributionForCurrentOS`.
 
 ## Architecture
