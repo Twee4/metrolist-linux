@@ -13,7 +13,7 @@ import java.awt.Dimension
 
 // Compose's default is 800x600, which is too cramped for the player bar. This opens comfortably
 // on a 1080p screen, and the minimum keeps the layout from collapsing if the user shrinks it.
-private val INITIAL_SIZE = DpSize(1200.dp, 780.dp)
+private val INITIAL_SIZE = DpSize(2880.dp, 1800.dp)
 private const val MIN_WIDTH = 960
 private const val MIN_HEIGHT = 600
 
