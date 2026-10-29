@@ -58,7 +58,8 @@ If there is no D-Bus session (for example over plain SSH) the app prints one lin
 ### System tray
 
 Closing the window hides it to the tray and the music keeps playing. Click the tray icon to bring the window back,
-or right-click it for play/pause, next, previous, show/hide and quit.
+or right-click it for play/pause, next, previous, show/hide and quit. Press **Ctrl+Q** in the window to quit the app
+completely.
 
 Not every desktop has a tray: KDE, XFCE and most others do, while GNOME needs the
 [AppIndicator extension](https://extensions.gnome.org/extension/615/appindicator-support/). Without a tray,
