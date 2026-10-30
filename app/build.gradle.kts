@@ -18,7 +18,9 @@ kotlin {
             }
         }
 
-        desktopMain {
+        // "desktop" is a custom target name, so Gradle's generated `desktopMain` shortcut is not
+        // guaranteed to exist; `by getting` looks the source set up by name instead.
+        val desktopMain by getting {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(compose.material3)
