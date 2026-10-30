@@ -8,6 +8,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Tray
@@ -84,6 +89,13 @@ fun main() = application {
         title = "Metrolist Linux",
         icon = AppIcon,
         state = windowState,
+        // Ctrl+Q quits for real (unlike the close button, which hides to the tray). The preview
+        // handler runs before the focused widget, so it works even while typing in the search box.
+        onPreviewKeyEvent = { event ->
+            val isQuit = event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.Q
+            if (isQuit) exitApplication()
+            isQuit
+        },
     ) {
         LaunchedEffect(window) { window.minimumSize = Dimension(MIN_WIDTH, MIN_HEIGHT) }
         MetrolistApp(player)
