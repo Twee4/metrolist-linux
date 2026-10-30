@@ -41,9 +41,23 @@ compose {
             mainClass = "com.metrolist.linux.MainKt"
 
             nativeDistributions {
-                targetFormats(TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.AppImage)
+                // .deb and .rpm installers. (Compose's "AppImage" target only makes a plain portable
+                // folder, not a .AppImage file; that comes from :app:createDistributable instead.)
+                targetFormats(TargetFormat.Deb, TargetFormat.Rpm)
                 packageName = "metrolist-linux"
                 packageVersion = "1.0.0"
+                description = "Native Linux desktop client for YouTube Music"
+                vendor = "Metrolist Linux"
+
+                // The bundled runtime is trimmed to the modules it detects. This app loads libraries
+                // reflectively (D-Bus, Ktor), so a trimmed runtime can fail only in the packaged build.
+                // Including everything costs some size but removes that whole class of bug.
+                includeAllModules = true
+
+                linux {
+                    iconFile.set(project.file("packaging/icon.png"))
+                    shortcut = true // adds an entry to the desktop's application menu
+                }
             }
         }
     }

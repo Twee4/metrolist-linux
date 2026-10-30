@@ -1,0 +1,75 @@
+name: Release
+
+# Builds .deb, .rpm and a portable tarball for x86_64 and aarch64.
+#   - Push a tag like v1.0.0 to build them and attach them to a GitHub release.
+#   - Or run it by hand from the Actions tab to just get the files as downloadable artifacts.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.14.3
+
+      # jpackage shells out to these to create the installers.
+      - name: Install packaging tools
+        run: sudo apt-get update && sudo apt-get install -y rpm fakeroot
+
+      - name: Build packages
+        run: gradle :app:packageDeb :app:packageRpm :app:createDistributable --no-daemon
+
+      - name: Collect files
+        run: |
+          mkdir -p dist
+          cp app/build/compose/binaries/main/deb/*.deb dist/
+          cp app/build/compose/binaries/main/rpm/*.rpm dist/
+          tar -C app/build/compose/binaries/main/app -czf "dist/metrolist-linux-${{ matrix.arch }}.tar.gz" metrolist-linux
+          ls -lh dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # needed to create the release
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          merge-multiple: true
+          path: dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
