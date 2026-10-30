@@ -27,11 +27,25 @@ import com.metrolist.shared.player.MprisService
 import com.metrolist.shared.player.MpvAudioBackend
 import com.metrolist.shared.player.PlayerController
 import java.awt.Dimension
+import java.awt.GraphicsEnvironment
 
 // Initial window size; the minimum keeps the layout from collapsing if the user shrinks it.
-private val INITIAL_SIZE = DpSize(2880.dp, 1800.dp)
+private const val PREFERRED_WIDTH = 2880
+private const val PREFERRED_HEIGHT = 1800
 private const val MIN_WIDTH = 960
 private const val MIN_HEIGHT = 600
+
+/**
+ * The preferred size, but never more than 90% of the screen's usable area (the part not covered by
+ * panels). A fixed size larger than the screen pushes the title bar, and its close button, off the
+ * edge, which is easy to hit with display scaling on a HiDPI laptop.
+ */
+private fun initialWindowSize(): DpSize {
+    val usable = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
+    val width = minOf(PREFERRED_WIDTH, (usable.width * 0.9).toInt()).coerceAtLeast(MIN_WIDTH)
+    val height = minOf(PREFERRED_HEIGHT, (usable.height * 0.9).toInt()).coerceAtLeast(MIN_HEIGHT)
+    return DpSize(width.dp, height.dp)
+}
 
 fun main() = application {
     // The player lives here, above the window, so the tray menu and media keys keep working
@@ -46,7 +60,7 @@ fun main() = application {
     DisposableEffect(player) { onDispose { player.close() } }
 
     val windowState = rememberWindowState(
-        size = INITIAL_SIZE,
+        size = initialWindowSize(),
         position = WindowPosition.Aligned(Alignment.Center),
     )
     var windowVisible by remember { mutableStateOf(true) }
