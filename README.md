@@ -64,7 +64,21 @@ Not every desktop has a tray: KDE, XFCE and most others do, while GNOME needs th
 [AppIndicator extension](https://extensions.gnome.org/extension/615/appindicator-support/). Without a tray,
 closing the window quits the app so it can never be left running with no way to reach it.
 
-Linux packages (`.deb`, `.rpm`, AppImage) are built with `./gradlew :app:packageDistributionForCurrentOS`.
+## Packaging
+
+Build installers yourself (output goes under `app/build/compose/binaries/main/`):
+
+```bash
+./gradlew :app:packageRpm          # .rpm for Fedora/openSUSE; needs: sudo dnf install rpm-build
+./gradlew :app:packageDeb          # .deb for Debian/Ubuntu;    needs: sudo apt install fakeroot
+./gradlew :app:createDistributable # portable folder (run bin/metrolist-linux), no installer needed
+```
+
+`mpv` and `yt-dlp` are not bundled, so install them separately (see "Audio playback" above).
+
+Pushing a tag such as `v1.0.0` runs the **Release** workflow, which builds the `.deb`, `.rpm` and a portable
+`.tar.gz` for both x86_64 and aarch64 and attaches them to a GitHub release. It can also be started by hand
+from the Actions tab to get the files as downloadable artifacts without making a release.
 
 ## Architecture
 
