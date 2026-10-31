@@ -1,14 +1,12 @@
 package com.metrolist.shared.repository
 
-import com.metrolist.shared.model.Album
 import com.metrolist.shared.model.Track
 
 interface MusicRepository {
     suspend fun search(query: String): List<Track>
-    suspend fun getLibrary(): List<Album>
 }
 
-/** Demo data source used until the real YouTube Music backend is ported. */
+/** Demo search data, used only as the base for [YouTubeMusicRepository] and in tests. */
 class InMemoryMusicRepository : MusicRepository {
     private val tracks = listOf(
         Track("1", "Desktop Example Track", "Metrolist", "Demo Album", 214),
@@ -25,10 +23,4 @@ class InMemoryMusicRepository : MusicRepository {
                 it.artist.contains(normalized, ignoreCase = true)
         }
     }
-
-    override suspend fun getLibrary(): List<Album> = listOf(
-        Album("a1", "Library Picks", "Various Artists"),
-        Album("a2", "Night Drive", "Metrolist Demo"),
-        Album("a3", "Deep Focus", "Metrolist Demo"),
-    )
 }

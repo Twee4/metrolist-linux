@@ -10,8 +10,8 @@ The project now includes:
 
 - a shared Kotlin state layer
 - a Compose desktop shell
-- a search screen prototype
-- a library/settings foundation
+- real YouTube Music search and audio playback
+- sign-in and your library (playlists and liked songs)
 - a clear path for incremental feature porting from the Android app
 
 ## Run
@@ -55,14 +55,28 @@ playerctl -p metrolist next
 
 If there is no D-Bus session (for example over plain SSH) the app prints one line to stderr and runs without it.
 
+### Signing in and your library
+
+Search works without an account. To see your own playlists and liked songs, sign in under **Settings** by
+pasting the `Cookie` header your browser sends to YouTube Music:
+
+1. Open <https://music.youtube.com> in your browser while signed in.
+2. Press F12, open the **Network** tab and reload the page.
+3. Click a request to `music.youtube.com` (for example `browse`) and copy the value of the **Cookie** request header.
+4. Paste it into Settings and press **Sign in**.
+
+**The cookie works like a password for your Google account.** It is stored in
+`~/.config/metrolist-linux/cookie` (or under `$XDG_CONFIG_HOME`), readable only by you, and is sent only to
+`music.youtube.com`. Signing out deletes the file. If YouTube later rejects it, the Library tab says so and you
+paste a fresh one. Signing in uses an unofficial interface, so use it at your own risk.
+
 ### System tray
 
 Closing the window hides it to the tray and the music keeps playing. Click the tray icon to bring the window back,
 or right-click it for play/pause, next, previous, show/hide and quit.
 
-Not every desktop has a tray: KDE, XFCE and most others do, while GNOME needs the
-[AppIndicator extension](https://extensions.gnome.org/extension/615/appindicator-support/). Without a tray,
-closing the window quits the app so it can never be left running with no way to reach it.
+Not every desktop offers a tray this app can use (some Wayland setups, such as niri, do not). Without a tray,
+closing the window quits the app so it can never be left running with no way to reach it. Ctrl+Q always quits.
 
 ## Packaging
 
@@ -101,6 +115,6 @@ metrolist-linux/
 
 1. Port the core YouTube/Music API and metadata logic from the Android app
 2. Add a real player panel and queue management
-3. Add library browsing and playlist features
+3. Library: home recommendations, albums, artists and history (playlists and liked songs are done)
 4. Add Linux-native system integration and packaging
 5. Prepare a production-ready desktop build for Linux distributions

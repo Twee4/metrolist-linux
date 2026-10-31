@@ -5,8 +5,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
 
 /**
  * Parses the JSON returned by YouTube Music's internal `youtubei/v1/search` endpoint.
@@ -21,8 +19,10 @@ object YouTubeMusicSearchParser {
     private val durationRegex = Regex("""^(?:(\d+):)?(\d{1,2}):(\d{2})$""")
     private val typeLabels = setOf("song", "video", "episode")
 
-    fun parse(body: String): List<Track> {
-        val root = json.parseToJsonElement(body)
+    fun parse(body: String): List<Track> = parseTree(json.parseToJsonElement(body))
+
+    /** Tracks found anywhere under [root], without duplicates. Also used for playlist pages. */
+    internal fun parseTree(root: JsonElement): List<Track> {
         val seen = HashSet<String>()
         return findRenderers(root)
             .mapNotNull(::toTrack)
@@ -61,10 +61,17 @@ object YouTubeMusicSearchParser {
             .filterNot { it.size == 1 && it[0].lowercase() in typeLabels }
         val details = groups.map { it.joinToString("") }
 
-        val durationText = details.lastOrNull { durationRegex.matches(it) }
+        // Playlist rows keep the duration in a fixed column and the album in a third flex column;
+        // search rows put everything in the second column, separated by " • ".
+        val fixedDuration = renderer.array("fixedColumns")?.firstOrNull()?.asObject()
+            ?.obj("musicResponsiveListItemFixedColumnRenderer")?.runs()?.firstOrNull()
+            ?.string("text")?.trim()?.takeIf { durationRegex.matches(it) }
+        val durationText = fixedDuration ?: details.lastOrNull { durationRegex.matches(it) }
         val rest = details.filterNot { it == durationText }
+        val thirdColumn = columns.getOrNull(2)?.runs()?.joinToString("") { it.string("text").orEmpty() }
+            ?.trim()?.takeIf { it.isNotEmpty() }
         val artist = rest.getOrNull(0) ?: "Unknown Artist"
-        val album = rest.getOrNull(1) ?: "Unknown Album"
+        val album = thirdColumn ?: rest.getOrNull(1) ?: "Unknown Album"
 
         val artUrl = renderer.obj("thumbnail")
             ?.obj("musicThumbnailRenderer")
@@ -105,11 +112,4 @@ object YouTubeMusicSearchParser {
         return hours * 3600 + minutes * 60 + seconds
     }
 
-    private fun JsonObject.runs(): List<JsonObject> =
-        obj("text")?.array("runs")?.mapNotNull { it.asObject() }.orEmpty()
-
-    private fun JsonElement.asObject(): JsonObject? = this as? JsonObject
-    private fun JsonObject.obj(key: String): JsonObject? = this[key] as? JsonObject
-    private fun JsonObject.array(key: String): JsonArray? = this[key] as? JsonArray
-    private fun JsonObject.string(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
 }
