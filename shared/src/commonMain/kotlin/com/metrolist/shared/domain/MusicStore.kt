@@ -1,6 +1,5 @@
 package com.metrolist.shared.domain
 
-import com.metrolist.shared.model.Album
 import com.metrolist.shared.model.Track
 import com.metrolist.shared.repository.InMemoryMusicRepository
 import com.metrolist.shared.repository.MusicRepository
@@ -25,9 +24,6 @@ class MusicStore(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    private val _library = MutableStateFlow<List<Album>>(emptyList())
-    val library: StateFlow<List<Album>> = _library.asStateFlow()
-
     /** Runs a search. Cancelling the calling coroutine (e.g. on the next keystroke) aborts it. */
     suspend fun updateQuery(nextQuery: String) {
         _query.value = nextQuery
@@ -49,9 +45,5 @@ class MusicStore(
         } finally {
             _isSearching.value = false
         }
-    }
-
-    suspend fun load() {
-        _library.value = repository.getLibrary()
     }
 }

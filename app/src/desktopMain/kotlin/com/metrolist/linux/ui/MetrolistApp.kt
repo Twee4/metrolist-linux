@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
@@ -33,7 +32,6 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +48,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,14 +56,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.metrolist.shared.auth.CookieAuth
+import com.metrolist.shared.domain.LibraryStore
 import com.metrolist.shared.domain.MusicStore
-import com.metrolist.shared.model.Album
 import com.metrolist.shared.model.Track
 import com.metrolist.shared.player.PlayerController
 import com.metrolist.shared.player.PlayerState
 import com.metrolist.shared.player.RepeatMode
+import com.metrolist.shared.repository.YouTubeMusicApi
+import com.metrolist.shared.repository.YouTubeMusicLibraryRepository
 import com.metrolist.shared.repository.YouTubeMusicRepository
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 private enum class NavItem(val label: String) {
@@ -84,11 +87,19 @@ fun MetrolistApp(player: PlayerController) {
     val results by store.results.collectAsState()
     val isSearching by store.isSearching.collectAsState()
     val error by store.error.collectAsState()
-    val library by store.library.collectAsState()
+
+    // Sign-in state and the signed-in user's library. The API reads the cookie on every request,
+    // so signing in or out takes effect without recreating anything.
+    val auth = remember { CookieAuth() }
+    val libraryStore = remember { LibraryStore(YouTubeMusicLibraryRepository(YouTubeMusicApi(auth = auth))) }
+    val signedIn by auth.signedIn.collectAsState()
+    val libraryState by libraryStore.library.collectAsState()
+    val openPlaylist by libraryStore.playlist.collectAsState()
+    val scope = rememberCoroutineScope()
 
     val playerState by player.state.collectAsState()
 
-    LaunchedEffect(store) { store.load() }
+    LaunchedEffect(signedIn) { libraryStore.refresh(signedIn) }
 
     // Debounce: a new keystroke cancels the pending search and restarts the timer.
     LaunchedEffect(query) {
@@ -123,7 +134,7 @@ fun MetrolistApp(player: PlayerController) {
 
                     Box(modifier = Modifier.fillMaxSize().padding(20.dp)) {
                         when (selected) {
-                            NavItem.HOME -> HomeScreen(library)
+                            NavItem.HOME -> HomeScreen(signedIn)
                             NavItem.SEARCH -> SearchScreen(
                                 query = query,
                                 onQueryChange = { query = it },
@@ -139,8 +150,26 @@ fun MetrolistApp(player: PlayerController) {
                                 onPlayAt = player::playAt,
                                 onRemove = player::removeAt,
                             )
-                            NavItem.LIBRARY -> LibraryScreen(library)
-                            NavItem.SETTINGS -> SettingsScreen()
+                            NavItem.LIBRARY -> {
+                                val playlist = openPlaylist
+                                if (playlist != null) {
+                                    PlaylistScreen(
+                                        state = playlist,
+                                        currentTrackId = playerState.current?.id,
+                                        onBack = libraryStore::close,
+                                        onPlay = { track, tracks -> player.play(track, tracks) },
+                                        onAddToQueue = player::addToQueue,
+                                    )
+                                } else {
+                                    LibraryScreen(
+                                        state = libraryState,
+                                        onOpen = { scope.launch { libraryStore.open(it) } },
+                                        onRetry = { scope.launch { libraryStore.refresh(signedIn) } },
+                                        onOpenSettings = { selected = NavItem.SETTINGS },
+                                    )
+                                }
+                            }
+                            NavItem.SETTINGS -> SettingsScreen(auth)
                         }
                     }
                 }
@@ -161,10 +190,10 @@ fun MetrolistApp(player: PlayerController) {
 }
 
 @Composable
-private fun HomeScreen(library: List<Album>) {
+private fun HomeScreen(signedIn: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Metrolist Linux", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Native Linux desktop port foundation for the Metrolist ecosystem.")
+        Text("A native Linux client for YouTube Music.")
 
         Box(
             modifier = Modifier
@@ -172,33 +201,10 @@ private fun HomeScreen(library: List<Album>) {
                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f), RoundedCornerShape(18.dp))
                 .padding(20.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Status", style = MaterialTheme.typography.titleMedium)
-                Text("The shared state layer is working. The next step is to port the actual music logic from the Android app.")
-            }
-        }
-
-        Text("Library overview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(library) { album ->
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column {
-                            Text(album.title, fontWeight = FontWeight.SemiBold)
-                            Text(album.artist)
-                        }
-                        Text("Album")
-                    }
-                }
-            }
+            Text(
+                if (signedIn) "Signed in. Open Library for your playlists and liked songs, or Search for anything else."
+                else "Search works without an account. Sign in under Settings to see your own playlists and liked songs."
+            )
         }
     }
 }
@@ -235,79 +241,14 @@ private fun SearchScreen(
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(tracks) { track ->
-                    val isCurrent = track.id == currentTrackId
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onPlay(track) }
-                                .padding(start = 12.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    track.title,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.Unspecified,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                            Text(formatTime(track.durationSeconds.toDouble()))
-                            IconButton(onClick = { onAddToQueue(track) }) {
-                                Icon(Icons.Default.PlaylistAdd, contentDescription = "Add to queue")
-                            }
-                        }
-                    }
+                    TrackRow(
+                        track = track,
+                        isCurrent = track.id == currentTrackId,
+                        onPlay = { onPlay(track) },
+                        onAddToQueue = { onAddToQueue(track) },
+                    )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun LibraryScreen(library: List<Album>) {
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text("Library", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        if (library.isEmpty()) {
-            Text("No items loaded yet.")
-        } else {
-            library.forEach { album ->
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column {
-                            Text(album.title, fontWeight = FontWeight.SemiBold)
-                            Text(album.artist)
-                        }
-                        Text("${album.year ?: "N/A"}")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingsScreen() {
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Linux app settings and system integration are planned next.")
-        Button(onClick = {}) {
-            Text("Apply desktop configuration")
         }
     }
 }
@@ -494,7 +435,7 @@ private fun PlayerBar(
     }
 }
 
-private fun formatTime(totalSeconds: Double): String {
+internal fun formatTime(totalSeconds: Double): String {
     val seconds = totalSeconds.toLong().coerceAtLeast(0)
     val hours = seconds / 3600
     val minutes = (seconds % 3600) / 60
