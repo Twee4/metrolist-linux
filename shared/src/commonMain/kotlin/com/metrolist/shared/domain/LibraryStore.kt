@@ -1,6 +1,7 @@
 package com.metrolist.shared.domain
 
 import com.metrolist.shared.model.Playlist
+import com.metrolist.shared.model.Shelf
 import com.metrolist.shared.model.Track
 import com.metrolist.shared.repository.LibraryRepository
 import kotlinx.coroutines.CancellationException
@@ -23,6 +24,12 @@ sealed interface PlaylistState {
     data class Failed(override val playlist: Playlist, val message: String) : PlaylistState
 }
 
+sealed interface HomeState {
+    data object Loading : HomeState
+    data class Loaded(val shelves: List<Shelf>) : HomeState
+    data class Failed(val message: String) : HomeState
+}
+
 /** UI state for the signed-in user's library and the playlist currently being viewed. */
 class LibraryStore(private val repository: LibraryRepository) {
     private val _library = MutableStateFlow<LibraryState>(LibraryState.SignedOut)
@@ -30,6 +37,21 @@ class LibraryStore(private val repository: LibraryRepository) {
 
     private val _playlist = MutableStateFlow<PlaylistState?>(null)
     val playlist: StateFlow<PlaylistState?> = _playlist.asStateFlow()
+
+    private val _home = MutableStateFlow<HomeState>(HomeState.Loading)
+    val home: StateFlow<HomeState> = _home.asStateFlow()
+
+    /** Loads the recommendations. They also work signed out, just less personal. */
+    suspend fun refreshHome() {
+        _home.value = HomeState.Loading
+        _home.value = try {
+            HomeState.Loaded(repository.home())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            HomeState.Failed(e.message ?: "Could not load recommendations")
+        }
+    }
 
     /** Loads the library, or clears it when [signedIn] is false. Safe to call again to retry. */
     suspend fun refresh(signedIn: Boolean) {

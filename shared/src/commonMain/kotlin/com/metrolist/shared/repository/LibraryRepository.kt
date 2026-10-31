@@ -1,12 +1,14 @@
 package com.metrolist.shared.repository
 
 import com.metrolist.shared.model.Playlist
+import com.metrolist.shared.model.Shelf
 import com.metrolist.shared.model.Track
 
 /** The signed-in user's own music. */
 interface LibraryRepository {
     suspend fun playlists(): List<Playlist>
     suspend fun tracks(playlist: Playlist): List<Track>
+    suspend fun home(): List<Shelf>
 }
 
 class YouTubeMusicLibraryRepository(private val api: BrowseApi) : LibraryRepository {
@@ -16,6 +18,8 @@ class YouTubeMusicLibraryRepository(private val api: BrowseApi) : LibraryReposit
             .filter { it.browseId != LIKED_SONGS.browseId } // shown first, below
         return listOf(LIKED_SONGS) + fromLibrary
     }
+
+    override suspend fun home(): List<Shelf> = YouTubeMusicBrowseParser.parseHome(api.browse(HOME_ID))
 
     override suspend fun tracks(playlist: Playlist): List<Track> {
         val seenIds = HashSet<String>()
@@ -38,6 +42,7 @@ class YouTubeMusicLibraryRepository(private val api: BrowseApi) : LibraryReposit
 
     companion object {
         const val LIBRARY_PLAYLISTS_ID = "FEmusic_liked_playlists"
+        const val HOME_ID = "FEmusic_home"
         const val MAX_PAGES = 20
 
         /** "Liked songs" is a playlist with the fixed id LM, but is not always in the library grid. */

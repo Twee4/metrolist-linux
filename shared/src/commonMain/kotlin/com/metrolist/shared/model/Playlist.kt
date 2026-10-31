@@ -10,3 +10,10 @@ data class Playlist(
 
 /** One page-through of a playlist: its tracks. */
 data class PlaylistContents(val playlist: Playlist, val tracks: List<Track>)
+
+/** A titled row on the home page: songs you can play, and albums/playlists you can open. */
+data class Shelf(
+    val title: String,
+    val tracks: List<Track> = emptyList(),
+    val collections: List<Playlist> = emptyList(),
+)

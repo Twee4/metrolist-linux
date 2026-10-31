@@ -12,6 +12,7 @@ The project now includes:
 - a Compose desktop shell
 - real YouTube Music search and audio playback
 - sign-in and your library (playlists and liked songs)
+- a Home page of recommendations (works signed out too)
 - a clear path for incremental feature porting from the Android app
 
 ## Run
@@ -115,6 +116,6 @@ metrolist-linux/
 
 1. Port the core YouTube/Music API and metadata logic from the Android app
 2. Add a real player panel and queue management
-3. Library: home recommendations, albums, artists and history (playlists and liked songs are done)
+3. Library: artists, history and album artwork (playlists, liked songs and home recommendations are done)
 4. Add Linux-native system integration and packaging
 5. Prepare a production-ready desktop build for Linux distributions

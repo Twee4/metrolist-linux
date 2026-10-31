@@ -1,6 +1,5 @@
 package com.metrolist.linux.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -94,12 +93,15 @@ fun MetrolistApp(player: PlayerController) {
     val libraryStore = remember { LibraryStore(YouTubeMusicLibraryRepository(YouTubeMusicApi(auth = auth))) }
     val signedIn by auth.signedIn.collectAsState()
     val libraryState by libraryStore.library.collectAsState()
+    val homeState by libraryStore.home.collectAsState()
     val openPlaylist by libraryStore.playlist.collectAsState()
     val scope = rememberCoroutineScope()
 
     val playerState by player.state.collectAsState()
 
     LaunchedEffect(signedIn) { libraryStore.refresh(signedIn) }
+    // Recommendations differ once signed in, so reload them when that changes.
+    LaunchedEffect(signedIn) { libraryStore.refreshHome() }
 
     // Debounce: a new keystroke cancels the pending search and restarts the timer.
     LaunchedEffect(query) {
@@ -134,7 +136,18 @@ fun MetrolistApp(player: PlayerController) {
 
                     Box(modifier = Modifier.fillMaxSize().padding(20.dp)) {
                         when (selected) {
-                            NavItem.HOME -> HomeScreen(signedIn)
+                            NavItem.HOME -> HomeScreen(
+                                state = homeState,
+                                signedIn = signedIn,
+                                currentTrackId = playerState.current?.id,
+                                onPlay = { track, tracks -> player.play(track, tracks) },
+                                onOpen = { collection ->
+                                    // Albums and playlists open on the Library tab's playlist page.
+                                    selected = NavItem.LIBRARY
+                                    scope.launch { libraryStore.open(collection) }
+                                },
+                                onRetry = { scope.launch { libraryStore.refreshHome() } },
+                            )
                             NavItem.SEARCH -> SearchScreen(
                                 query = query,
                                 onQueryChange = { query = it },
@@ -185,26 +198,6 @@ fun MetrolistApp(player: PlayerController) {
                     onVolumeChange = player::setVolume,
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun HomeScreen(signedIn: Boolean) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("Metrolist Linux", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("A native Linux client for YouTube Music.")
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f), RoundedCornerShape(18.dp))
-                .padding(20.dp)
-        ) {
-            Text(
-                if (signedIn) "Signed in. Open Library for your playlists and liked songs, or Search for anything else."
-                else "Search works without an account. Sign in under Settings to see your own playlists and liked songs."
-            )
         }
     }
 }
