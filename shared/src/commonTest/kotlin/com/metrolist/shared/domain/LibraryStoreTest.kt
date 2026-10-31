@@ -16,6 +16,7 @@ class LibraryStoreTest {
     private class FakeRepo(var fail: Boolean = false, val list: List<Playlist>, val songs: List<Track>) : LibraryRepository {
         override suspend fun playlists(): List<Playlist> = if (fail) error("boom") else list
         override suspend fun tracks(playlist: Playlist): List<Track> = if (fail) error("nope") else songs
+        override suspend fun home(): List<com.metrolist.shared.model.Shelf> = if (fail) error("home") else emptyList()
     }
 
     @Test
@@ -35,6 +36,17 @@ class LibraryStoreTest {
         repo.fail = true
         store.refresh(true)
         assertEquals(LibraryState.Failed("boom"), store.library.value)
+    }
+
+    @Test
+    fun homeLoadsAndReportsFailures() = runTest {
+        val repo = FakeRepo(list = emptyList(), songs = emptyList())
+        val store = LibraryStore(repo)
+        store.refreshHome()
+        assertEquals(HomeState.Loaded(emptyList()), store.home.value)
+        repo.fail = true
+        store.refreshHome()
+        assertEquals(HomeState.Failed("home"), store.home.value)
     }
 
     @Test

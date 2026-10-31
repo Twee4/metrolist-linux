@@ -84,4 +84,34 @@ class YouTubeMusicBrowseParserTest {
         assertEquals(listOf("v3"), page.tracks.map { it.id })
         assertEquals("NEXT", page.continuation)
     }
+
+    @Test
+    fun parsesHomeShelves() {
+        val body = """{ "contents": [
+          { "musicCarouselShelfRenderer": {
+              "header": { "musicCarouselShelfBasicHeaderRenderer": { "title": { "runs": [ { "text": "Listen again" } ] } } },
+              "contents": [
+                { "musicTwoRowItemRenderer": { "title": { "runs": [ { "text": "Some Song" } ] },
+                  "subtitle": { "runs": [ { "text": "Song" }, { "text": " • " }, { "text": "Band" } ] },
+                  "navigationEndpoint": { "watchEndpoint": { "videoId": "vid1" } } } },
+                { "musicTwoRowItemRenderer": { "title": { "runs": [ { "text": "Some Album" } ] },
+                  "subtitle": { "runs": [ { "text": "Album • Band" } ] },
+                  "navigationEndpoint": { "browseEndpoint": { "browseId": "MPREb_x" } } } },
+                { "musicTwoRowItemRenderer": { "title": { "runs": [ { "text": "An Artist" } ] },
+                  "navigationEndpoint": { "browseEndpoint": { "browseId": "UCabc" } } } }
+              ] } },
+          { "musicCarouselShelfRenderer": {
+              "header": { "musicCarouselShelfBasicHeaderRenderer": { "title": { "runs": [ { "text": "Empty" } ] } } },
+              "contents": [] } },
+          { "musicCarouselShelfRenderer": {
+              "contents": [ { "musicTwoRowItemRenderer": { "title": { "runs": [ { "text": "x" } ] },
+                  "navigationEndpoint": { "watchEndpoint": { "videoId": "no-title-shelf" } } } } ] } }
+        ] }"""
+        val shelves = YouTubeMusicBrowseParser.parseHome(body)
+        val shelf = shelves.single()
+        assertEquals("Listen again", shelf.title)
+        assertEquals(listOf("vid1"), shelf.tracks.map { it.id })
+        assertEquals("Band", shelf.tracks.single().artist)
+        assertEquals(listOf("MPREb_x"), shelf.collections.map { it.browseId })
+    }
 }
